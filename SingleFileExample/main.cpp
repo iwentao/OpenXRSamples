@@ -119,6 +119,7 @@ ID3DBlob            *d3d_compile_shader   (const char* hlsl, const char* entrypo
 
 ///////////////////////////////////////////
 
+//WT: HLSL shader file
 constexpr char app_shader_code[] = R"_(
 cbuffer TransformBuffer : register(b0) {
 	float4x4 world;
@@ -166,10 +167,17 @@ uint16_t app_inds[] = {
 // Main                                  //
 ///////////////////////////////////////////
 
+#if defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_APP)
+// Windows Store or Universal Windows Platform
+[Platform::MTAThread]
+int main(Platform::Array<Platform::String^>^) {
+#else
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
+#endif
 	if (!openxr_init("Single file OpenXR", d3d_swapchain_fmt)) {
 		d3d_shutdown();
-		MessageBox(nullptr, "OpenXR initialization failed\n", "Error", 1);
+		// WENTAO 2022-1-4: MessageBox is not available on UWP.
+		//MessageBox(nullptr, "OpenXR initialization failed\n", "Error", 1);
 		return 1;
 	}
 	openxr_make_actions();
@@ -247,7 +255,7 @@ bool openxr_init(const char *app_name, int64_t swapchain_format) {
 
 	// Initialize OpenXR with the extensions we've found!
 	XrInstanceCreateInfo createInfo = { XR_TYPE_INSTANCE_CREATE_INFO };
-	createInfo.enabledExtensionCount      = use_extensions.size();
+	createInfo.enabledExtensionCount      = (uint32_t)use_extensions.size();
 	createInfo.enabledExtensionNames      = use_extensions.data();
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 	strcpy_s(createInfo.applicationInfo.applicationName, app_name);
